@@ -1,36 +1,30 @@
-#import the requied things to be use
-from flask import Flask, request, render_template, redirect, url_for
-from dotenv import load_dotenv
-from datetime import datetime
+from flask import Flask, request, jsonify
+from pymongo import MongoClient
 import os
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-  
-# Load environment variables
+from dotenv import load_dotenv
+
 load_dotenv()
 
-# MongoDB connection
-MONGODB_URI = os.getenv('MONGODB_URI')
-client = MongoClient(MONGODB_URI)
-db = client.dummydb
-collection = db['dummydb']
-
-# Flask app
 app = Flask(__name__)
 
-# Home route with form
-@app.route('/')
-def home():
-    
-    day_of_week = datetime.today().strftime('%A')
-    current_time = datetime.now().strftime('%H:%M:%S')
-    return render_template('index.html', day_of_week=day_of_week, current_time=current_time)
+MONGODB_URI = os.getenv("MONGODB_URI")
+client = MongoClient(MONGODB_URI)
+db = client.todo_db
+collection = db.todo_items
 
-@app.route('/submit', methods=['POST'])
-def submit():
+@app.route("/submittodoitem", methods=["POST"])
+def submit_todo_item():
+    data = request.get_json()
+    todo_item = {
+        "itemName": data.get("itemName"),
+        "itemDescription": data.get("itemDescription")
+    }
+    result = collection.insert_one(todo_item)
+    return jsonify({
+        "message": "To-Do item saved successfully!",
+        "id": str(result.inserted_id)
+    }), 201
 
-    form_data = dict(request.form)
-    collection.insert_one(form_data)
-    return 'Data Submitted Successfully'
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
+
